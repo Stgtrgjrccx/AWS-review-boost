@@ -5,11 +5,11 @@ import Providers from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'ReviewBoost Pro — Turn Every Customer Into a 5-Star Review',
+  title: 'ASW Review Boost — Turn Every Customer Into a 5-Star Review',
   description: 'The smart review management platform that helps businesses get more Google reviews through WhatsApp, SMS, and AI-powered funnels.',
-  keywords: 'review management, Google reviews, review boosting, customer feedback, reputation management',
+  keywords: 'review management, Google reviews, review boosting, customer feedback, reputation management, ASW review boost',
   openGraph: {
-    title: 'ReviewBoost Pro',
+    title: 'ASW Review Boost',
     description: 'Turn Every Customer Into a 5-Star Review',
     type: 'website',
   },

@@ -109,7 +109,7 @@ export default function MarketingPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16
           }}>⭐</div>
           <span style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 800, fontSize: 18 }}>
-            Review<span style={{ color: '#6366f1' }}>Boost</span> Pro
+            ASW Review<span style={{ color: '#6366f1' }}>Boost</span>
           </span>
         </div>
         <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
@@ -270,7 +270,7 @@ export default function MarketingPage() {
           Ready to get your first<br /><span className="gradient-text">100 new reviews?</span>
         </h2>
         <p style={{ color: 'var(--text-muted)', marginBottom: 32, fontSize: 16 }}>
-          Join 10,000+ businesses already growing with ReviewBoost Pro.
+          Join 10,000+ businesses already growing with ASW Review Boost.
         </p>
         <a href="/signup" className="btn btn-primary btn-lg">🚀 Start Free Today — No Credit Card</a>
       </section>
@@ -278,10 +278,10 @@ export default function MarketingPage() {
       {/* Footer */}
       <footer style={{ borderTop: '1px solid var(--border-subtle)', padding: '32px 60px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: 16 }}>
-          Review<span style={{ color: '#6366f1' }}>Boost</span> Pro
+          ASW Review<span style={{ color: '#6366f1' }}>Boost</span>
         </div>
         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          © 2026 ReviewBoost Pro. Built to get you more 5-star reviews.
+          © 2026 ASW Review Boost. Built to get you more 5-star reviews.
         </div>
         <div style={{ display: 'flex', gap: 20, fontSize: 13 }}>
           <a href="#" style={{ color: 'var(--text-muted)' }}>Privacy</a>

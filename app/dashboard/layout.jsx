@@ -40,7 +40,7 @@ export default function DashboardLayout({ children }) {
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon">⭐</div>
           <div className="sidebar-logo-text">
-            Review<span>Boost</span>
+            ASW Review<span>Boost</span>
           </div>
         </div>
 

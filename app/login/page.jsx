@@ -50,10 +50,10 @@ export default function LoginPage() {
             fontSize: 26, margin: '0 auto 14px',
           }}>⭐</div>
           <h1 style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 800, fontSize: 24, marginBottom: 6 }}>
-            Welcome back
+            Welcome to ASW Review Boost
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-            Sign in to your ReviewBoost Pro account
+            Sign in to your business dashboard
           </p>
         </div>
 
@@ -143,7 +143,7 @@ export default function LoginPage() {
         )}
 
         <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: 'var(--text-muted)' }}>
-          New to ReviewBoost?{' '}
+          New to ASW Review Boost?{' '}
           <a href="/signup" style={{ color: 'var(--brand-primary)', fontWeight: 600 }}>
             Create an account →
           </a>
