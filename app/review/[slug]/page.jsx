@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 
 // Industry-specific quick tags (matches lib/gemini.js)
@@ -52,7 +52,7 @@ function launchConfetti(canvas) {
   }
 }
 
-export default function ReviewFunnelPage() {
+function ReviewFunnelContent() {
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -368,5 +368,20 @@ export default function ReviewFunnelPage() {
         </div>
       </div>
     </>
+  )
+}
+
+export default function ReviewFunnelPage() {
+  return (
+    <Suspense fallback={
+      <div className="funnel-page" style={{ background: '#0a0a0f', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>⭐</div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    }>
+      <ReviewFunnelContent />
+    </Suspense>
   )
 }
