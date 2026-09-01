@@ -28,17 +28,17 @@
     "react-dom": "19.2.8",
     "react-hot-toast": "^2.6.0",
     "recharts": "^3.10.1",
-    "twilio": "^6.1.0"
+    "twilio": "^6.1.0",
+    "@prisma/client": "^5.22.0",
+    "prisma": "^5.22.0"
   },
   "devDependencies": {
-    "@prisma/client": "^5.22.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
-    "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

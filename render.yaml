@@ -3,7 +3,7 @@ services:
     name: asw-review-boost
     env: node
     plan: free
-    buildCommand: npm install && npx prisma generate && npm run build
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_VERSION
@@ -12,8 +12,6 @@ services:
         fromDatabase:
           name: asw-review-boost-db
           property: connectionString
-      - key: NODE_ENV
-        value: production
       - key: NEXTAUTH_SECRET
         generateValue: true
       - key: NEXTAUTH_URL
