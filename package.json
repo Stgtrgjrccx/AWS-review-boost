@@ -1,0 +1,50 @@
+{
+  "name": "review-boost-pro",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@next-auth/prisma-adapter": "^1.0.7",
+    "@types/qrcode": "^1.5.6",
+    "canvas-confetti": "^1.9.4",
+    "cloudinary": "^2.11.0",
+    "csv-parser": "^3.2.1",
+    "framer-motion": "^13.1.1",
+    "lucide-react": "^1.38.0",
+    "multer": "^2.3.0",
+    "next": "16.3.4",
+    "next-auth": "^4.24.15",
+    "nodemailer": "^7.0.13",
+    "qrcode": "^1.5.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-hot-toast": "^2.6.0",
+    "recharts": "^3.10.1",
+    "twilio": "^6.1.0"
+  },
+  "devDependencies": {
+    "@prisma/client": "^5.22.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "prisma": "^5.22.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "prisma@5.22.0": true
+  }
+}

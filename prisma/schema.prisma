@@ -1,0 +1,159 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  accounts  Account[]
+  sessions  Session[]
+  business  Business?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Business {
+  id              String   @id @default(cuid())
+  ownerId         String   @unique
+  name            String
+  slug            String   @unique
+  industry        String   @default("default")
+  logoUrl         String?
+  googleReviewUrl String?
+  yelpUrl         String?
+  tripadvisorUrl  String?
+  brandColor      String   @default("#4f46e5")
+  brandFont       String   @default("Inter")
+  ctaButtonText   String   @default("Share Your Experience")
+  planTier        String   @default("free")
+  onboardingDone  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner         User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  customers     Customer[]
+  reviewRequests ReviewRequest[]
+  feedbacks     Feedback[]
+  campaigns     Campaign[]
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  email      String?
+  phone      String
+  source     String   @default("manual") // manual | csv | pos
+  optOut     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  reviewRequests ReviewRequest[]
+  feedbacks      Feedback[]
+
+  @@unique([businessId, phone])
+}
+
+model ReviewRequest {
+  id                String    @id @default(cuid())
+  businessId        String
+  customerId        String
+  channel           String    // whatsapp | sms
+  messageType       String    @default("template") // template | ai
+  messageBody       String?   @db.Text
+  status            String    @default("pending") // pending | sent | delivered | failed
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  clickedAt         DateTime?
+  starRating        Int?
+  platformRedirected String?   // google | yelp | tripadvisor
+  twilioSid         String?
+  createdAt         DateTime  @default(now())
+
+  business  Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer  Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id         String   @id @default(cuid())
+  businessId String
+  customerId String?
+  starRating Int
+  quickTags  String[] 
+  comment    String?  @db.Text
+  resolved   Boolean  @default(false)
+  autoReplied Boolean @default(false)
+  createdAt  DateTime @default(now())
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id])
+}
+
+model Campaign {
+  id              String   @id @default(cuid())
+  businessId      String
+  name            String
+  channel         String   // whatsapp | sms | both
+  sendTimeType    String   @default("immediate") // immediate | scheduled | ai
+  scheduledAt     DateTime?
+  messageTemplate String   @db.Text
+  aiPersonalized  Boolean  @default(false)
+  totalSent       Int      @default(0)
+  totalDelivered  Int      @default(0)
+  totalClicked    Int      @default(0)
+  status          String   @default("draft") // draft | sending | completed
+  createdAt       DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model OptOut {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  createdAt DateTime @default(now())
+}
