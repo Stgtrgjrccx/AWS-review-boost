@@ -6,9 +6,9 @@ import { signOut, useSession } from 'next-auth/react'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: '📊', label: 'Overview' },
+  { href: '/dashboard/client-view', icon: '📸', label: 'Client Report (SS)' },
   { href: '/dashboard/send', icon: '💬', label: 'Send Request' },
   { href: '/dashboard/campaigns', icon: '📢', label: 'Campaigns' },
-  { href: '/dashboard/customers', icon: '👥', label: 'Customers' },
   { href: '/dashboard/qr-codes', icon: '📲', label: 'QR Codes' },
   { href: '/dashboard/feedback', icon: '📥', label: 'Feedback Inbox', badge: true },
   { href: '/dashboard/settings', icon: '⚙️', label: 'Settings' },
