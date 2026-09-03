@@ -133,13 +133,31 @@ export default function ProspectsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="btn btn-primary"
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', fontSize: 13, fontWeight: 700 }}
-        >
-          <span>+</span> Add Potential Client
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <a
+            href="/exports/pune_business_leads_under_4_stars.xlsx"
+            download="pune_business_leads_under_4_stars.xlsx"
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', fontSize: 12, fontWeight: 700, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981' }}
+          >
+            📊 Download Excel (.xlsx)
+          </a>
+          <a
+            href="/exports/pune_business_leads_under_4_stars.csv"
+            download="pune_business_leads_under_4_stars.csv"
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', fontSize: 12, fontWeight: 700 }}
+          >
+            📄 Download CSV
+          </a>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', fontSize: 13, fontWeight: 700 }}
+          >
+            <span>+</span> Add Potential Client
+          </button>
+        </div>
       </div>
 
       {/* Notification banner */}
