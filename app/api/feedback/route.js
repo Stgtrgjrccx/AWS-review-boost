@@ -1,24 +1,20 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { getAllClients } from '@/lib/clients'
 
-// GET /api/feedback — fetch all feedback for the business
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const clients = getAllClients()
+    // Consolidate all intercepted complaints across clients
+    const allFeedbacks = clients.flatMap(c =>
+      (c.interceptedFeedback || []).map(f => ({
+        ...f,
+        clientName: c.name,
+        clientSlug: c.slug,
+        customer: { name: f.customer, phone: f.phone },
+      }))
+    )
 
-    const business = await prisma.business.findUnique({ where: { ownerId: session.user.id } })
-    if (!business) return NextResponse.json({ feedbacks: [] })
-
-    const feedbacks = await prisma.feedback.findMany({
-      where: { businessId: business.id },
-      orderBy: { createdAt: 'desc' },
-      include: { customer: { select: { name: true, phone: true } } },
-    })
-
-    return NextResponse.json({ feedbacks })
+    return NextResponse.json({ feedbacks: allFeedbacks })
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
