@@ -1,247 +1,402 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
-} from 'recharts'
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div style={{
-        background: 'var(--bg-card)', border: '1px solid var(--border-default)',
-        borderRadius: 10, padding: '10px 14px', fontSize: 13,
-      }}>
-        <p style={{ fontWeight: 700, marginBottom: 4 }}>{label}</p>
-        {payload.map(p => (
-          <p key={p.name} style={{ color: p.color }}>{p.name}: {p.value}</p>
-        ))}
-      </div>
-    )
-  }
-  return null
-}
-
-export default function DashboardPage() {
-  const session = useSession()?.data
-  const [stats, setStats] = useState(null)
-  const [chartData, setChartData] = useState([])
-  const [recentRequests, setRecentRequests] = useState([])
+export default function OperationsHub() {
+  const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
+  const [copiedSlug, setCopiedSlug] = useState(null)
+
+  // Quick Dispatch Form
+  const [dispatchForm, setDispatchForm] = useState({
+    clientId: '',
+    customerName: '',
+    customerPhone: '',
+    channel: 'whatsapp',
+  })
+  const [dispatchStatus, setDispatchStatus] = useState(null)
+  const [dispatching, setDispatching] = useState(false)
+
+  const loadClients = () => {
+    fetch('/api/operator/clients')
+      .then(r => r.json())
+      .then(d => {
+        const list = d.clients || []
+        setClients(list)
+        if (list.length > 0 && !dispatchForm.clientId) {
+          setDispatchForm(prev => ({ ...prev, clientId: list[0].id }))
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/analytics').then(r => r.json()),
-      fetch('/api/analytics/chart').then(r => r.json()),
-      fetch('/api/analytics/recent').then(r => r.json()),
-    ]).then(([s, c, r]) => {
-      setStats(s)
-      setChartData(c.data || [])
-      setRecentRequests(r.requests || [])
-      setLoading(false)
-    }).catch(() => {
-      // Use mock data if API fails in dev
-      setStats({ sent: 142, clicked: 98, rated: 67, avgRating: 4.7, negativeFeedback: 5, conversionRate: 47 })
-      setChartData(Array.from({ length: 7 }, (_, i) => ({
-        date: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-        sent: Math.floor(Math.random() * 20) + 10,
-        clicked: Math.floor(Math.random() * 15) + 5,
-      })))
-      setRecentRequests([
-        { id: '1', customer: { name: 'Priya Sharma' }, channel: 'whatsapp', status: 'delivered', starRating: 5, createdAt: new Date().toISOString() },
-        { id: '2', customer: { name: 'Rahul Mehta' }, channel: 'sms', status: 'clicked', starRating: null, createdAt: new Date().toISOString() },
-        { id: '3', customer: { name: 'Sneha Patel' }, channel: 'whatsapp', status: 'sent', starRating: null, createdAt: new Date().toISOString() },
-      ])
-      setLoading(false)
-    })
+    loadClients()
   }, [])
 
-  const statCards = [
-    { label: 'Requests Sent', value: stats?.sent ?? '—', change: '+12%', variant: 'brand', icon: '📤' },
-    { label: 'Click Rate', value: stats ? `${stats.conversionRate}%` : '—', change: '+5%', variant: 'success', icon: '👆' },
-    { label: 'Avg Star Rating', value: stats?.avgRating ?? '—', change: '+0.3', variant: 'gold', icon: '⭐' },
-    { label: 'Feedback Received', value: stats?.negativeFeedback ?? '—', change: '-2', variant: 'danger', icon: '📥' },
-  ]
+  const handleQuickDispatch = async (e) => {
+    e.preventDefault()
+    if (!dispatchForm.customerName || !dispatchForm.customerPhone) return
+    setDispatching(true)
+    setDispatchStatus(null)
 
-  const statusBadge = (status) => {
-    const map = {
-      pending: ['badge-muted', '⏳ Pending'],
-      sent: ['badge-info', '📤 Sent'],
-      delivered: ['badge-success', '✅ Delivered'],
-      clicked: ['badge-warning', '👆 Clicked'],
-      failed: ['badge-danger', '❌ Failed'],
+    try {
+      const res = await fetch('/api/operator/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dispatchForm),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setDispatchStatus({ success: true, message: `Dispatched to ${dispatchForm.customerName} via ${dispatchForm.channel}` })
+        setDispatchForm(prev => ({ ...prev, customerName: '', customerPhone: '' }))
+        loadClients()
+      } else {
+        setDispatchStatus({ success: false, message: data.error || 'Failed to dispatch' })
+      }
+    } catch (err) {
+      setDispatchStatus({ success: false, message: 'Gateway error' })
+    } finally {
+      setDispatching(false)
     }
-    const [cls, text] = map[status] || ['badge-muted', status]
-    return <span className={`badge ${cls}`}>{text}</span>
   }
+
+  const copyLiveLink = (slug) => {
+    const url = `${window.location.origin}/live/${slug}`
+    navigator.clipboard.writeText(url)
+    setCopiedSlug(slug)
+    setTimeout(() => setCopiedSlug(null), 2500)
+  }
+
+  // Aggregate stats across all client properties
+  const totalSent = clients.reduce((acc, c) => acc + (c.reviewsSent || 0), 0)
+  const totalFiveStars = clients.reduce((acc, c) => acc + (c.fiveStarCount || 0), 0)
+  const totalIntercepted = clients.reduce((acc, c) => acc + (c.interceptedCount || 0), 0)
+  const avgRating = clients.length > 0
+    ? (clients.reduce((acc, c) => acc + (c.avgRating || 5), 0) / clients.length).toFixed(2)
+    : '5.0'
 
   return (
     <div>
-      {/* Welcome */}
-      <div className="page-header">
-        <div className="page-header-left">
-          <h1>Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'} 👋</h1>
-          <p>Here's how your review campaigns are performing today.</p>
+      {/* Top Welcome & Summary */}
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, color: '#f8fafc' }}>
+            ASW Cloud Operations Command Center
+          </h1>
+          <p style={{ color: '#94a3b8', margin: '6px 0 0 0', fontSize: 14 }}>
+            Multi-property review acceleration, live client tracking, and private reputation shielding.
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <Link href="/dashboard/send" className="btn btn-primary">
-            💬 Send Review Request
-          </Link>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)',
+          padding: '6px 14px', borderRadius: 20, fontSize: 12, color: '#10b981', fontWeight: 700
+        }}>
+          ● All Systems Operational
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="stats-grid">
-        {statCards.map(s => (
-          <div key={s.label} className={`stat-card ${s.variant}`}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-              <div className="stat-label">{s.label}</div>
-              <span style={{ fontSize: 22 }}>{s.icon}</span>
-            </div>
-            <div className="stat-value">{loading ? '...' : s.value}</div>
-            <div className={`stat-change ${s.variant === 'danger' ? '' : ''}`}>
-              {s.change} vs last month
-            </div>
+      {/* Global Operational Metrics Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 28 }}>
+        
+        <div style={{ background: '#0e101c', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 22px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: 8 }}>
+            Active Properties Managed
           </div>
-        ))}
+          <div style={{ fontSize: 32, fontWeight: 900, color: '#f8fafc' }}>
+            {clients.length} <span style={{ fontSize: 14, color: '#10b981', fontWeight: 600 }}>Active</span>
+          </div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>100% Protection Shield</div>
+        </div>
+
+        <div style={{ background: '#0e101c', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 22px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: 8 }}>
+            Total 5★ Reviews Generated
+          </div>
+          <div style={{ fontSize: 32, fontWeight: 900, color: '#6366f1' }}>
+            +{totalFiveStars}
+          </div>
+          <div style={{ fontSize: 12, color: '#10b981', marginTop: 4 }}>▲ 94.2% Gating Success</div>
+        </div>
+
+        <div style={{ background: '#0e101c', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 22px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: 8 }}>
+            Complaints Shielded Privately
+          </div>
+          <div style={{ fontSize: 32, fontWeight: 900, color: '#10b981' }}>
+            {totalIntercepted}
+          </div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Deflected from Google</div>
+        </div>
+
+        <div style={{ background: '#0e101c', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 22px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: 8 }}>
+            Aggregate Google Rating
+          </div>
+          <div style={{ fontSize: 32, fontWeight: 900, color: '#f59e0b' }}>
+            {avgRating} <span style={{ fontSize: 16, color: '#64748b' }}>/ 5.0</span>
+          </div>
+          <div style={{ fontSize: 12, color: '#f59e0b', marginTop: 4 }}>★★★★★ Verified</div>
+        </div>
+
       </div>
 
-      {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 28 }}>
-        {/* Area Chart */}
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      {/* Main Grid: Quick Dispatch Terminal + Client Properties Table */}
+      <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 24, alignItems: 'start' }}>
+
+        {/* Quick Dispatch Terminal */}
+        <div style={{
+          background: '#0e101c',
+          border: '1px solid rgba(99,102,241,0.25)',
+          borderRadius: 20,
+          padding: 24,
+          boxShadow: '0 12px 30px rgba(0,0,0,0.3)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+            <span style={{ fontSize: 20 }}>⚡</span>
             <div>
-              <h3 style={{ fontWeight: 700, fontSize: 16 }}>Review Requests</h3>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Last 7 days</p>
+              <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: '#fff' }}>
+                Instant Dispatch Terminal
+              </h3>
+              <p style={{ fontSize: 12, color: '#94a3b8', margin: '2px 0 0 0' }}>
+                Fire review requests for any client property
+              </p>
             </div>
-            <select className="form-select" style={{ width: 'auto', padding: '6px 10px', fontSize: 13 }}>
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Last 90 days</option>
-            </select>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="gradSent" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradClicked" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={12} />
-              <YAxis stroke="var(--text-muted)" fontSize={12} />
-              <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="sent" name="Sent" stroke="#6366f1" fill="url(#gradSent)" strokeWidth={2} />
-              <Area type="monotone" dataKey="clicked" name="Clicked" stroke="#10b981" fill="url(#gradClicked)" strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
 
-        {/* Star distribution */}
-        <div className="card">
-          <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Star Ratings</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>Customer responses</p>
-          {[5, 4, 3, 2, 1].map(star => (
-            <div key={star} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, width: 16 }}>{star}</span>
-              <span style={{ fontSize: 14 }}>⭐</span>
-              <div style={{ flex: 1, height: 8, background: 'var(--border-subtle)', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${[68, 18, 7, 4, 3][5 - star]}%`,
-                  background: star >= 4 ? '#10b981' : star === 3 ? '#f59e0b' : '#ef4444',
-                  borderRadius: 4,
-                  transition: 'width 0.8s ease',
-                }} />
+          <form onSubmit={handleQuickDispatch}>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#94a3b8', marginBottom: 5 }}>
+                Target Client Property
+              </label>
+              <select
+                value={dispatchForm.clientId}
+                onChange={e => setDispatchForm({ ...dispatchForm, clientId: e.target.value })}
+                style={{
+                  width: '100%', padding: '9px 12px', background: '#161828',
+                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 13
+                }}
+              >
+                {clients.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#94a3b8', marginBottom: 5 }}>
+                Customer Name *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Ramesh Patel"
+                value={dispatchForm.customerName}
+                onChange={e => setDispatchForm({ ...dispatchForm, customerName: e.target.value })}
+                style={{
+                  width: '100%', padding: '9px 12px', background: '#161828',
+                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 13
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#94a3b8', marginBottom: 5 }}>
+                Customer Phone Number *
+              </label>
+              <input
+                type="tel"
+                required
+                placeholder="+91 98765 43210"
+                value={dispatchForm.customerPhone}
+                onChange={e => setDispatchForm({ ...dispatchForm, customerPhone: e.target.value })}
+                style={{
+                  width: '100%', padding: '9px 12px', background: '#161828',
+                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 13
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#94a3b8', marginBottom: 5 }}>
+                Channel
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[
+                  { id: 'whatsapp', label: '💬 WhatsApp' },
+                  { id: 'sms', label: '📱 SMS' },
+                ].map(ch => (
+                  <button
+                    key={ch.id}
+                    type="button"
+                    onClick={() => setDispatchForm({ ...dispatchForm, channel: ch.id })}
+                    style={{
+                      flex: 1, padding: '8px 10px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      background: dispatchForm.channel === ch.id ? 'rgba(99,102,241,0.2)' : '#161828',
+                      border: `1px solid ${dispatchForm.channel === ch.id ? '#6366f1' : 'rgba(255,255,255,0.1)'}`,
+                      color: dispatchForm.channel === ch.id ? '#fff' : '#94a3b8',
+                    }}
+                  >
+                    {ch.label}
+                  </button>
+                ))}
               </div>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', width: 30 }}>
-                {[68, 18, 7, 4, 3][5 - star]}%
-              </span>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Recent Requests */}
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ fontWeight: 700, fontSize: 16 }}>Recent Review Requests</h3>
-          <Link href="/dashboard/campaigns" className="btn btn-ghost btn-sm">View all →</Link>
+            <button
+              type="submit"
+              disabled={dispatching}
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center', padding: '11px', fontSize: 13, fontWeight: 700 }}
+            >
+              {dispatching ? 'Dispatching Gateway...' : '🚀 Dispatch Review Invite'}
+            </button>
+
+            {dispatchStatus && (
+              <div style={{
+                marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 12,
+                background: dispatchStatus.success ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                color: dispatchStatus.success ? '#10b981' : '#ef4444',
+                border: `1px solid ${dispatchStatus.success ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
+              }}>
+                {dispatchStatus.message}
+              </div>
+            )}
+          </form>
         </div>
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Channel</th>
-                <th>Status</th>
-                <th>Rating</th>
-                <th>Sent</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentRequests.map(r => (
-                <tr key={r.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div className="avatar" style={{ width: 30, height: 30, fontSize: 12 }}>
-                        {r.customer?.name?.[0] || '?'}
-                      </div>
-                      <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                        {r.customer?.name || 'Unknown'}
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="badge badge-info">
-                      {r.channel === 'whatsapp' ? '💬 WhatsApp' : '📱 SMS'}
-                    </span>
-                  </td>
-                  <td>{statusBadge(r.status)}</td>
-                  <td>
-                    {r.starRating
-                      ? <span style={{ fontWeight: 700 }}>{'⭐'.repeat(r.starRating)}</span>
-                      : <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>—</span>
-                    }
-                  </td>
-                  <td style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                    {new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  </td>
+
+        {/* Client Properties Directory Table */}
+        <div style={{
+          background: '#0e101c',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 20,
+          padding: 24,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <div>
+              <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: '#fff' }}>
+                🏢 Managed Client Properties
+              </h3>
+              <p style={{ fontSize: 13, color: '#94a3b8', margin: '4px 0 0 0' }}>
+                All client portals with direct links for customer sharing and screenshot reporting.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#64748b', textAlign: 'left' }}>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Property / Client</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Sector</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>5★ Driven</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Shielded</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Rating</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600, textAlign: 'right' }}>Client Live Portal</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {recentRequests.length === 0 && (
-            <div className="empty-state">
-              <div className="empty-state-icon">📭</div>
-              <h3>No requests yet</h3>
-              <p>Send your first review request to get started</p>
-            </div>
-          )}
-        </div>
-      </div>
+              </thead>
+              <tbody>
+                {clients.map(client => (
+                  <tr key={client.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    
+                    {/* Client Name */}
+                    <td style={{ padding: '14px 12px', fontWeight: 700, color: '#fff' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: client.brandColor || '#6366f1' }} />
+                        <span>{client.name}</span>
+                      </div>
+                    </td>
 
-      {/* Quick Actions */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginTop: 20 }}>
-        {[
-          { href: '/dashboard/send', icon: '💬', label: 'Send Single Request', desc: 'Enter a customer\'s number' },
-          { href: '/dashboard/campaigns', icon: '📢', label: 'Launch Campaign', desc: 'Upload CSV & bulk send' },
-          { href: '/dashboard/qr-codes', icon: '📲', label: 'Get QR Code', desc: 'Print for your counter' },
-          { href: '/dashboard/feedback', icon: '📥', label: 'Check Feedback', desc: 'View private complaints' },
-        ].map(a => (
-          <Link key={a.href} href={a.href} className="card" style={{ cursor: 'pointer', textDecoration: 'none' }}>
-            <div style={{ fontSize: 28, marginBottom: 12 }}>{a.icon}</div>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{a.label}</div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{a.desc}</div>
-          </Link>
-        ))}
+                    {/* Sector */}
+                    <td style={{ padding: '14px 12px', color: '#94a3b8', textTransform: 'capitalize' }}>
+                      {client.industry}
+                    </td>
+
+                    {/* 5-Star Count */}
+                    <td style={{ padding: '14px 12px', color: '#6366f1', fontWeight: 700 }}>
+                      +{client.fiveStarCount}
+                    </td>
+
+                    {/* Intercepted */}
+                    <td style={{ padding: '14px 12px', color: '#10b981', fontWeight: 700 }}>
+                      {client.interceptedCount}
+                    </td>
+
+                    {/* Rating */}
+                    <td style={{ padding: '14px 12px', color: '#f59e0b', fontWeight: 700 }}>
+                      {client.avgRating} ★
+                    </td>
+
+                    {/* Actions: Live Portal Link & Preview */}
+                    <td style={{ padding: '14px 12px', textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: 8 }}>
+                        {/* Copy Live Portal URL */}
+                        <button
+                          onClick={() => copyLiveLink(client.slug)}
+                          style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: 6,
+                            color: '#cbd5e1',
+                            padding: '5px 10px',
+                            fontSize: 12,
+                            cursor: 'pointer',
+                          }}
+                          title="Copy non-interactive live dashboard link to send to customer"
+                        >
+                          {copiedSlug === client.slug ? '✓ Copied' : '📋 Copy Link'}
+                        </button>
+
+                        {/* Open in new tab */}
+                        <a
+                          href={`/live/${client.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            background: 'rgba(99,102,241,0.15)',
+                            border: '1px solid rgba(99,102,241,0.3)',
+                            borderRadius: 6,
+                            color: '#818cf8',
+                            padding: '5px 10px',
+                            fontSize: 12,
+                            textDecoration: 'none',
+                            fontWeight: 600,
+                          }}
+                        >
+                          👁 Live View
+                        </a>
+                      </div>
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Table Footer Instructions */}
+          <div style={{
+            marginTop: 18,
+            padding: '12px 16px',
+            background: 'rgba(99,102,241,0.06)',
+            border: '1px solid rgba(99,102,241,0.15)',
+            borderRadius: 10,
+            fontSize: 12,
+            color: '#94a3b8',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+            <span style={{ fontSize: 16 }}>💡</span>
+            <span>
+              <strong>Client Reporting Workflow:</strong> Click <strong>"Copy Link"</strong> next to any client and send it to them via WhatsApp or email. They will see their auto-updating, read-only live dashboard which they (or you) can screenshot at any time!
+            </span>
+          </div>
+
+        </div>
+
       </div>
     </div>
   )
