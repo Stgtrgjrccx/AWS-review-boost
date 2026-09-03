@@ -11,9 +11,10 @@ export default function QRCodesPage() {
   const [size, setSize] = useState(300)
   const [fgColor, setFgColor] = useState('#1a1a2e')
   const [bgColor, setBgColor] = useState('#ffffff')
-  const [loading, setLoading] = useState(false)
+  const [origin, setOrigin] = useState('')
 
   useEffect(() => {
+    setOrigin(window.location.origin)
     // Fetch all available businesses and prospects
     Promise.all([
       fetch('/api/operator/clients').then(r => r.json()).catch(() => []),
@@ -40,7 +41,7 @@ export default function QRCodesPage() {
     })
   }, [])
 
-  const reviewUrl = typeof window !== 'undefined' ? `${window.location.origin}/review/${slug}` : `https://reviewboostpro.com/review/${slug}`
+  const reviewUrl = `${origin || 'https://reviewboostpro.com'}/review/${slug}`
 
   const generateQR = async () => {
     setLoading(true)
