@@ -891,6 +891,82 @@ tbody tr:hover {
 }
 
 /* =========================================================
+   REVME AI REVIEW ASSISTANT (VIRAL REEL WORKFLOW)
+   ========================================================= */
+.revme-ai-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 16px;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.revme-tone-pill {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+  padding: 6px 12px;
+  border-radius: 980px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.revme-tone-pill.active {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+}
+
+.revme-review-textarea {
+  width: 100%;
+  min-height: 95px;
+  border: none;
+  background: transparent;
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1.55;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  margin-top: 8px;
+}
+
+.revme-copy-btn {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 24px rgba(34, 197, 94, 0.35);
+}
+
+.revme-copy-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(34, 197, 94, 0.5);
+}
+
+.revme-copy-btn:active {
+  transform: translateY(0);
+}
+
+
+/* =========================================================
    SCROLLYTELLING APPLE VISION AESTHETIC
    ========================================================= */
 .scrolly-hero {

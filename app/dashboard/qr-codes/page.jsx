@@ -6,6 +6,7 @@ export default function QRCodesPage() {
   const canvasRef = useRef(null)
   const [slug, setSlug] = useState('')
   const [businessName, setBusinessName] = useState('')
+  const [businessesList, setBusinessesList] = useState([])
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [size, setSize] = useState(300)
   const [fgColor, setFgColor] = useState('#1a1a2e')
@@ -13,20 +14,33 @@ export default function QRCodesPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Fetch business slug from session/API
-    fetch('/api/business/me')
-      .then(r => r.json())
-      .then(d => {
-        setSlug(d.slug || 'your-business')
-        setBusinessName(d.name || 'Your Business')
-      })
-      .catch(() => {
-        setSlug('your-business')
-        setBusinessName('Your Business')
-      })
+    // Fetch all available businesses and prospects
+    Promise.all([
+      fetch('/api/operator/clients').then(r => r.json()).catch(() => []),
+      fetch('/api/operator/prospects').then(r => r.json()).catch(() => []),
+    ]).then(([clients, prospects]) => {
+      const all = [
+        ...(clients || []).map(c => ({ name: c.name, slug: c.slug })),
+        ...(prospects || []).map(p => ({
+          name: p.businessName,
+          slug: p.businessName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
+        }))
+      ]
+      setBusinessesList(all)
+      if (all.length > 0) {
+        setSlug(all[0].slug)
+        setBusinessName(all[0].name)
+      } else {
+        setSlug('peshwa-restaurant')
+        setBusinessName('Peshwa Restaurant')
+      }
+    }).catch(() => {
+      setSlug('peshwa-restaurant')
+      setBusinessName('Peshwa Restaurant')
+    })
   }, [])
 
-  const reviewUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://reviewboostpro.com'}/review/${slug}`
+  const reviewUrl = typeof window !== 'undefined' ? `${window.location.origin}/review/${slug}` : `https://reviewboostpro.com/review/${slug}`
 
   const generateQR = async () => {
     setLoading(true)
@@ -71,17 +85,50 @@ export default function QRCodesPage() {
         {/* Settings */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div className="card">
-            <h3 style={{ fontWeight: 700, marginBottom: 20 }}>Customize Your QR Code</h3>
+            <h3 style={{ fontWeight: 700, marginBottom: 20 }}>Customize Table Stand QR Code</h3>
 
             <div className="form-group">
-              <label className="form-label">Review Link URL</label>
+              <label className="form-label">Select Business</label>
+              <select
+                className="form-input"
+                value={slug}
+                onChange={e => {
+                  const selected = businessesList.find(b => b.slug === e.target.value)
+                  if (selected) {
+                    setSlug(selected.slug)
+                    setBusinessName(selected.name)
+                  }
+                }}
+                style={{ fontSize: 13, fontWeight: 600 }}
+              >
+                {businessesList.map(b => (
+                  <option key={b.slug} value={b.slug}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label className="form-label" style={{ margin: 0 }}>Review Link URL</label>
+                <a
+                  href={reviewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary btn-sm"
+                  style={{ padding: '4px 10px', fontSize: 11, fontWeight: 600 }}
+                >
+                  🚀 Test Consumer Flow ↗
+                </a>
+              </div>
               <input
                 className="form-input"
                 value={reviewUrl}
                 readOnly
                 style={{ color: 'var(--brand-primary)' }}
               />
-              <p className="form-hint">This is the URL your QR code links to. Share this directly too!</p>
+              <p className="form-hint">When consumers scan this table QR, the AI review generator immediately launches on their phone.</p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
