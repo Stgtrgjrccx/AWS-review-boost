@@ -425,6 +425,15 @@ export default function ScrollytellingCommandCenter() {
                     Call
                   </a>
 
+                  <Link
+                    href={`/dashboard/qr-codes?slug=${p.businessName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')}`}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '6px 12px', fontSize: 12 }}
+                    title="Generate Tabletop QR Code"
+                  >
+                    📲 QR
+                  </Link>
+
                   {p.stage !== 'won' ? (
                     <button
                       onClick={() => handleConvert(p)}
@@ -576,6 +585,15 @@ export default function ScrollytellingCommandCenter() {
                   >
                     Call
                   </a>
+
+                  <Link
+                    href={`/dashboard/qr-codes?slug=${p.businessName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')}`}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '6px 12px', fontSize: 12 }}
+                    title="Generate Tabletop QR Code"
+                  >
+                    📲 QR
+                  </Link>
 
                   {p.stage !== 'won' ? (
                     <button
