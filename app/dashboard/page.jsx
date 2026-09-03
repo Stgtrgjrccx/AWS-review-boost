@@ -1,434 +1,590 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-export default function OperationsHub() {
+export default function PotentialBuyersHub() {
+  const [prospects, setProspects] = useState([])
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
-  const [copiedSlug, setCopiedSlug] = useState(null)
+  const [filter, setFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [convertingId, setConvertingId] = useState(null)
+  const [notification, setNotification] = useState(null)
+  const [showAddModal, setShowAddModal] = useState(false)
 
-  // Quick Dispatch Form
-  const [dispatchForm, setDispatchForm] = useState({
-    clientId: '',
-    customerName: '',
-    customerPhone: '',
-    channel: 'whatsapp',
+  // New Lead Form
+  const [form, setForm] = useState({
+    businessName: '',
+    contactName: '',
+    contactRole: 'Owner',
+    phone: '',
+    email: '',
+    industry: 'restaurant',
+    city: 'Pune',
+    currentRating: '3.8',
+    currentReviewsCount: '50',
+    websiteStatus: 'No website',
+    targetPitch: 'Review Gating Shield + Next.js Mobile Website',
+    estimatedValue: '₹35,000',
+    opportunity: 'hot',
+    stage: 'new',
+    notes: '',
   })
-  const [dispatchStatus, setDispatchStatus] = useState(null)
-  const [dispatching, setDispatching] = useState(false)
 
-  const loadClients = () => {
-    fetch('/api/operator/clients')
-      .then(r => r.json())
-      .then(d => {
-        const list = d.clients || []
-        setClients(list)
-        if (list.length > 0 && !dispatchForm.clientId) {
-          setDispatchForm(prev => ({ ...prev, clientId: list[0].id }))
-        }
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+  const loadData = () => {
+    Promise.all([
+      fetch('/api/operator/prospects').then(r => r.json()).catch(() => ({ prospects: [] })),
+      fetch('/api/operator/clients').then(r => r.json()).catch(() => ({ clients: [] }))
+    ]).then(([pData, cData]) => {
+      setProspects(pData.prospects || [])
+      setClients(cData.clients || [])
+      setLoading(false)
+    })
   }
 
   useEffect(() => {
-    loadClients()
+    loadData()
   }, [])
 
-  const handleQuickDispatch = async (e) => {
-    e.preventDefault()
-    if (!dispatchForm.customerName || !dispatchForm.customerPhone) return
-    setDispatching(true)
-    setDispatchStatus(null)
-
+  const handleStageChange = async (id, newStage) => {
     try {
-      const res = await fetch('/api/operator/dispatch', {
-        method: 'POST',
+      await fetch('/api/operator/prospects', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dispatchForm),
+        body: JSON.stringify({ id, updates: { stage: newStage } }),
       })
-      const data = await res.json()
-      if (data.success) {
-        setDispatchStatus({ success: true, message: `Dispatched to ${dispatchForm.customerName} via ${dispatchForm.channel}` })
-        setDispatchForm(prev => ({ ...prev, customerName: '', customerPhone: '' }))
-        loadClients()
-      } else {
-        setDispatchStatus({ success: false, message: data.error || 'Failed to dispatch' })
-      }
+      loadData()
     } catch (err) {
-      setDispatchStatus({ success: false, message: 'Gateway error' })
-    } finally {
-      setDispatching(false)
+      console.error(err)
     }
   }
 
-  const copyLiveLink = (slug) => {
-    const url = `${window.location.origin}/live/${slug}`
-    navigator.clipboard.writeText(url)
-    setCopiedSlug(slug)
-    setTimeout(() => setCopiedSlug(null), 2500)
+  const handleConvert = async (prospect) => {
+    if (!confirm(`Convert ${prospect.businessName} to an active client?`)) {
+      return
+    }
+    setConvertingId(prospect.id)
+    try {
+      const res = await fetch('/api/operator/prospects', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: prospect.id, action: 'convert' }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setNotification({ type: 'success', text: `${prospect.businessName} is now an Active Client!` })
+        loadData()
+        setTimeout(() => setNotification(null), 4000)
+      }
+    } catch {
+      setNotification({ type: 'error', text: 'Error converting client' })
+    } finally {
+      setConvertingId(null)
+    }
   }
 
-  // Aggregate stats across verified Pune client properties
-  const totalSent = clients.reduce((acc, c) => acc + (c.reviewsSent || 0), 0)
-  const totalFiveStars = clients.reduce((acc, c) => acc + (c.fiveStarCount || 0), 0)
-  const totalIntercepted = clients.reduce((acc, c) => acc + (c.interceptedCount || 0), 0)
-  const totalWebVisitors = clients.reduce((acc, c) => acc + (c.website?.monthlyVisitors || 0), 0)
-  const totalWebLeads = clients.reduce((acc, c) => acc + (c.website?.leadsCaptured || 0), 0)
-  const liveWebsitesCount = clients.filter(c => c.website?.status === 'live').length
+  const handleAddProspect = async (e) => {
+    e.preventDefault()
+    try {
+      const res = await fetch('/api/operator/prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setShowAddModal(false)
+        loadData()
+        setNotification({ type: 'success', text: `Added ${form.businessName} to pipeline` })
+        setTimeout(() => setNotification(null), 3000)
+      }
+    } catch {
+      setNotification({ type: 'error', text: 'Failed to add prospect' })
+    }
+  }
 
-  const avgRating = clients.length > 0
-    ? (clients.reduce((acc, c) => acc + (c.avgRating || 5), 0) / clients.length).toFixed(2)
-    : '5.0'
+  const generateWhatsAppLink = (p) => {
+    const cleanPhone = (p.phone || '').replace(/[^0-9]/g, '')
+    const msg = encodeURIComponent(
+      `Hello ${p.contactName || 'there'}, this is Siddhant from ASW Studio Pune.\n\n` +
+      `I noticed ${p.businessName} on Google Maps in ${p.city}. You currently have a ${p.currentRating}★ rating with ${p.currentReviewsCount} reviews.\n\n` +
+      `We build private review shielding funnels and high-speed mobile booking websites for Pune businesses to filter out 1-star complaints and drive authentic 5-star Google reviews.\n\n` +
+      `Would you be open to a quick 2-minute demonstration tailored for ${p.businessName}?`
+    )
+    return `https://wa.me/${cleanPhone}?text=${msg}`
+  }
 
-  const allActivity = clients.flatMap(c =>
-    (c.recentActivity || []).map(a => ({ ...a, clientName: c.name, clientSlug: c.slug }))
-  ).slice(0, 7)
+  const filtered = prospects.filter(p => {
+    const matchesSearch = !searchQuery ||
+      p.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.contactName?.toLowerCase().includes(searchQuery.toLowerCase())
+
+    if (!matchesSearch) return false
+    if (filter === 'all') return true
+    if (filter === 'hot') return p.opportunity === 'hot'
+    return p.stage === filter
+  })
+
+  const hotCount = prospects.filter(p => p.opportunity === 'hot').length
+  const wonCount = prospects.filter(p => p.stage === 'won').length
+  const demoCount = prospects.filter(p => p.stage === 'demo_scheduled').length
 
   return (
     <div>
-      {/* Top Welcome & Overview */}
+      {/* Top Header */}
       <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: '#ffffff', letterSpacing: '-0.025em' }}>
-            Command Center
+            Potential Buyers (Pune Market)
           </h1>
           <p style={{ color: '#94a3b8', margin: '4px 0 0 0', fontSize: 13, letterSpacing: '-0.01em' }}>
-            Reputation Shielding & Web Infrastructure for Pune Client Properties
+            Real verified businesses in Pune with Google ratings under 4.0★ and outdated digital infrastructure.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <Link href="/dashboard/prospects" className="btn btn-secondary btn-sm" style={{ fontSize: 12 }}>
-            Potential Clients (20) →
-          </Link>
-          <Link href="/dashboard/websites" className="btn btn-secondary btn-sm" style={{ fontSize: 12 }}>
-            Website Studio →
-          </Link>
-          <div className="liquid-pill" style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '6px 14px', fontSize: 11, color: '#34d399', fontWeight: 600, letterSpacing: '0.02em'
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
-            SYSTEM LIVE
-          </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <a
+            href="/exports/pune_business_leads_under_4_stars.xlsx"
+            download="pune_business_leads_under_4_stars.xlsx"
+            className="btn btn-secondary btn-sm"
+            style={{ fontSize: 12, padding: '7px 14px' }}
+          >
+            Export Excel (.xlsx) ↗
+          </a>
+          <a
+            href="/exports/pune_business_leads_under_4_stars.csv"
+            download="pune_business_leads_under_4_stars.csv"
+            className="btn btn-secondary btn-sm"
+            style={{ fontSize: 12, padding: '7px 14px' }}
+          >
+            Export CSV
+          </a>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn btn-primary btn-sm"
+            style={{ fontSize: 12, padding: '7px 16px' }}
+          >
+            + Add Buyer Lead
+          </button>
         </div>
       </div>
 
-      {/* 5 Apple Liquid Glass Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 28 }}>
+      {/* Notification banner */}
+      {notification && (
+        <div className="liquid-pill" style={{
+          marginBottom: 20, padding: '10px 18px', fontSize: 13, fontWeight: 500,
+          background: notification.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)',
+          color: notification.type === 'success' ? '#34d399' : '#fb7185',
+          border: `1px solid ${notification.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(244,63,94,0.3)'}`,
+        }}>
+          {notification.text}
+        </div>
+      )}
+
+      {/* 4 Apple Liquid Glass Stat Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 26 }}>
         
-        {/* Managed Properties */}
+        {/* Verified Potential Buyers */}
         <div className="liquid-glass" style={{ padding: '20px 22px' }}>
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em', marginBottom: 8 }}>
-            Active Pune Properties
+            Verified Potential Buyers
           </div>
           <div style={{ fontSize: 32, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.03em' }}>
-            {clients.length} <span style={{ fontSize: 13, color: '#10b981', fontWeight: 600 }}>Active</span>
+            {prospects.length}
           </div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Full Coverage Shield</div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
+            Pune local businesses (&lt; 4.0★)
+          </div>
         </div>
 
-        {/* 5-Star Reviews */}
+        {/* Priority Rating Vulnerability */}
         <div className="liquid-glass" style={{ padding: '20px 22px' }}>
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em', marginBottom: 8 }}>
-            5★ Reviews Generated
+            High Priority (&lt; 3.8★)
+          </div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: '#fbbf24', letterSpacing: '-0.03em' }}>
+            {hotCount}
+          </div>
+          <div style={{ fontSize: 12, color: '#fbbf24', marginTop: 4 }}>
+            Urgent review shielding need
+          </div>
+        </div>
+
+        {/* Demos & Pitches */}
+        <div className="liquid-glass" style={{ padding: '20px 22px' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em', marginBottom: 8 }}>
+            Demos & Pitches Active
           </div>
           <div style={{ fontSize: 32, fontWeight: 800, color: '#38bdf8', letterSpacing: '-0.03em' }}>
-            +{totalFiveStars}
+            {demoCount}
           </div>
-          <div style={{ fontSize: 12, color: '#34d399', marginTop: 4 }}>94.2% Routed to Google</div>
+          <div style={{ fontSize: 12, color: '#38bdf8', marginTop: 4 }}>
+            In active discussions
+          </div>
         </div>
 
-        {/* Shielded Complaints */}
+        {/* Converted Active Clients */}
         <div className="liquid-glass" style={{ padding: '20px 22px' }}>
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em', marginBottom: 8 }}>
-            Shielded from Google
+            Active Converted Clients
           </div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#10b981', letterSpacing: '-0.03em' }}>
-            {totalIntercepted}
+          <div style={{ fontSize: 32, fontWeight: 800, color: clients.length > 0 ? '#10b981' : '#64748b', letterSpacing: '-0.03em' }}>
+            {clients.length}
           </div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Private Feedback Vault</div>
-        </div>
-
-        {/* Monthly Traffic */}
-        <div className="liquid-glass" style={{ padding: '20px 22px' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em', marginBottom: 8 }}>
-            Monthly Website Traffic
+          <div style={{ fontSize: 12, color: clients.length > 0 ? '#10b981' : '#64748b', marginTop: 4 }}>
+            {clients.length > 0 ? 'Managing reviews & websites' : '0 onboarded yet'}
           </div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.03em' }}>
-            {totalWebVisitors.toLocaleString()}
-          </div>
-          <div style={{ fontSize: 12, color: '#38bdf8', marginTop: 4 }}>Across {liveWebsitesCount} Live Domains</div>
-        </div>
-
-        {/* Inbound Leads */}
-        <div className="liquid-glass" style={{ padding: '20px 22px' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em', marginBottom: 8 }}>
-            Inbound Leads Captured
-          </div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#c084fc', letterSpacing: '-0.03em' }}>
-            +{totalWebLeads}
-          </div>
-          <div style={{ fontSize: 12, color: '#34d399', marginTop: 4 }}>Table & Slot Bookings</div>
         </div>
 
       </div>
 
-      {/* Main Split: Instant Dispatch Terminal + Unified Properties Table */}
-      <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 24, alignItems: 'start', marginBottom: 28 }}>
-
-        {/* Instant Dispatch Terminal */}
-        <div className="liquid-glass-elevated" style={{ padding: 24 }}>
-          <div style={{ marginBottom: 18 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#fff', letterSpacing: '-0.02em' }}>
-              Instant Dispatch
-            </h3>
-            <p style={{ fontSize: 12, color: '#94a3b8', margin: '3px 0 0 0' }}>
-              Send review invitations via gateway
-            </p>
-          </div>
-
-          <form onSubmit={handleQuickDispatch}>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 5 }}>
-                Target Client Property
-              </label>
-              <select
-                value={dispatchForm.clientId}
-                onChange={e => setDispatchForm({ ...dispatchForm, clientId: e.target.value })}
-                className="liquid-input"
-                style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
-              >
-                {clients.map(c => (
-                  <option key={c.id} value={c.id} style={{ background: '#121422', color: '#fff' }}>
-                    {c.name} ({c.address?.split(',')[0] || c.industry})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 5 }}>
-                Customer Full Name
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Rahul Sharma"
-                value={dispatchForm.customerName}
-                onChange={e => setDispatchForm({ ...dispatchForm, customerName: e.target.value })}
-                className="liquid-input"
-                style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
-              />
-            </div>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 5 }}>
-                Phone Number (WhatsApp)
-              </label>
-              <input
-                type="tel"
-                required
-                placeholder="+91 98220 12345"
-                value={dispatchForm.customerPhone}
-                onChange={e => setDispatchForm({ ...dispatchForm, customerPhone: e.target.value })}
-                className="liquid-input"
-                style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
-              />
-            </div>
-
-            <div style={{ marginBottom: 18 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 5 }}>
-                Channel
-              </label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[
-                  { id: 'whatsapp', label: 'WhatsApp' },
-                  { id: 'sms', label: 'SMS' },
-                ].map(ch => (
-                  <button
-                    key={ch.id}
-                    type="button"
-                    onClick={() => setDispatchForm({ ...dispatchForm, channel: ch.id })}
-                    style={{
-                      flex: 1, padding: '8px 10px', borderRadius: 980, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      background: dispatchForm.channel === ch.id ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${dispatchForm.channel === ch.id ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)'}`,
-                      color: dispatchForm.channel === ch.id ? '#ffffff' : '#94a3b8',
-                      boxShadow: dispatchForm.channel === ch.id ? 'inset 0 1px 0 rgba(255,255,255,0.2)' : 'none',
-                    }}
-                  >
-                    {ch.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
+      {/* Filter and Search Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
+        
+        {/* Stage Filter Buttons */}
+        <div className="liquid-pill" style={{ display: 'inline-flex', padding: 4 }}>
+          {[
+            { id: 'all', label: 'All (20)' },
+            { id: 'hot', label: 'Priority' },
+            { id: 'new', label: 'New' },
+            { id: 'pitch_sent', label: 'Pitched' },
+            { id: 'demo_scheduled', label: 'Demo' },
+            { id: 'follow_up', label: 'Follow Up' },
+            { id: 'won', label: 'Won' },
+          ].map(tab => (
             <button
-              type="submit"
-              disabled={dispatching}
-              className="btn btn-primary"
-              style={{ width: '100%', justifyContent: 'center', padding: '11px', fontSize: 13 }}
+              key={tab.id}
+              onClick={() => setFilter(tab.id)}
+              style={{
+                background: filter === tab.id ? 'rgba(255,255,255,0.12)' : 'transparent',
+                color: filter === tab.id ? '#ffffff' : '#94a3b8',
+                border: 'none',
+                borderRadius: 980,
+                padding: '6px 14px',
+                fontSize: 12,
+                fontWeight: filter === tab.id ? 600 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
             >
-              {dispatching ? 'Dispatching...' : 'Dispatch Invitation'}
+              {tab.label}
             </button>
-
-            {dispatchStatus && (
-              <div style={{
-                marginTop: 12, padding: '9px 12px', borderRadius: 10, fontSize: 12,
-                background: dispatchStatus.success ? 'rgba(16,185,129,0.12)' : 'rgba(244,63,94,0.12)',
-                color: dispatchStatus.success ? '#34d399' : '#fb7185',
-                border: `1px solid ${dispatchStatus.success ? 'rgba(16,185,129,0.25)' : 'rgba(244,63,94,0.25)'}`,
-              }}>
-                {dispatchStatus.message}
-              </div>
-            )}
-          </form>
-        </div>
-
-        {/* Managed Client Properties Table */}
-        <div className="liquid-glass" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <div>
-              <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: '#fff', letterSpacing: '-0.02em' }}>
-                Managed Client Properties (Pune)
-              </h3>
-              <p style={{ fontSize: 13, color: '#94a3b8', margin: '3px 0 0 0' }}>
-                Active reputation shields and live production websites.
-              </p>
-            </div>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#64748b', textAlign: 'left' }}>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Property / Locality</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Google Reviews</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Website Asset</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Traffic & Leads</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600, textAlign: 'right' }}>Portals</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clients.map(client => {
-                  const web = client.website || {}
-                  return (
-                    <tr key={client.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      
-                      {/* Property Name */}
-                      <td style={{ padding: '14px 12px', fontWeight: 600, color: '#fff' }}>
-                        <div>{client.name}</div>
-                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                          {client.address || client.industry}
-                        </div>
-                      </td>
-
-                      {/* Review Stats */}
-                      <td style={{ padding: '14px 12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ color: '#fbbf24', fontWeight: 700 }}>{client.avgRating} ★</span>
-                          <span style={{ color: '#38bdf8', fontWeight: 600 }}>(+{client.fiveStarCount} 5★)</span>
-                        </div>
-                        <div style={{ fontSize: 11, color: '#10b981', marginTop: 2 }}>
-                          {client.interceptedCount} complaints shielded
-                        </div>
-                      </td>
-
-                      {/* Website Asset */}
-                      <td style={{ padding: '14px 12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span className="liquid-pill" style={{
-                            fontSize: 10, fontWeight: 600, padding: '2px 8px',
-                            color: web.status === 'live' ? '#34d399' : '#38bdf8',
-                          }}>
-                            {web.status === 'live' ? '● Live' : 'In Dev'}
-                          </span>
-                          <a href={web.domain} target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8', fontSize: 12, textDecoration: 'none' }}>
-                            {web.domain?.replace(/^https?:\/\//, '')} ↗
-                          </a>
-                        </div>
-                      </td>
-
-                      {/* Traffic & Leads */}
-                      <td style={{ padding: '14px 12px' }}>
-                        <div style={{ fontWeight: 600, color: '#fff' }}>
-                          {web.monthlyVisitors?.toLocaleString() || 0} visits/mo
-                        </div>
-                        <div style={{ fontSize: 11, color: '#c084fc', marginTop: 2, fontWeight: 500 }}>
-                          +{web.leadsCaptured || 0} leads captured
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td style={{ padding: '14px 12px', textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: 6 }}>
-                          <button
-                            onClick={() => copyLiveLink(client.slug)}
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: '5px 10px', fontSize: 11 }}
-                            title="Copy live dashboard link for client"
-                          >
-                            {copiedSlug === client.slug ? '✓ Copied' : 'Copy Link'}
-                          </button>
-
-                          <a
-                            href={`/live/${client.slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: '5px 10px', fontSize: 11 }}
-                          >
-                            Live View ↗
-                          </a>
-                        </div>
-                      </td>
-
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Unified Real-Time Stream */}
-      <div className="liquid-glass" style={{ padding: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-          <div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#fff', letterSpacing: '-0.02em' }}>
-              Real-Time Activity & Lead Stream
-            </h3>
-            <p style={{ fontSize: 12, color: '#94a3b8', margin: '3px 0 0 0' }}>
-              Live customer ratings, dispatches, website leads, and project updates across Pune.
-            </p>
-          </div>
-          <span style={{ fontSize: 11, color: '#34d399', fontWeight: 600 }}>● Live Stream Active</span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-          {allActivity.map((act, i) => (
-            <div key={act.id || i} style={{
-              background: 'rgba(255,255,255,0.025)',
-              border: '1px solid rgba(255,255,255,0.05)',
-              borderRadius: 12,
-              padding: '12px 14px',
-              fontSize: 12,
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontWeight: 600, color: '#ffffff' }}>{act.clientName}</span>
-                <span style={{ color: '#64748b' }}>{act.time}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                <span style={{ color: '#cbd5e1', lineHeight: 1.4 }}>{act.note}</span>
-              </div>
-            </div>
           ))}
         </div>
+
+        {/* Search Input */}
+        <input
+          type="text"
+          placeholder="Filter by business name or area..."
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="liquid-input"
+          style={{ width: 260, padding: '8px 14px', fontSize: 12 }}
+        />
+
       </div>
+
+      {/* Potential Buyers Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 18 }}>
+        {filtered.map(p => {
+          const isHot = p.opportunity === 'hot'
+          return (
+            <div
+              key={p.id}
+              className="liquid-glass"
+              style={{
+                padding: '24px 26px',
+                position: 'relative',
+                borderTop: isHot ? '1px solid rgba(251, 191, 36, 0.4)' : '1px solid rgba(255,255,255,0.18)',
+              }}
+            >
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                <div>
+                  <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: '#ffffff', letterSpacing: '-0.02em' }}>
+                    {p.businessName}
+                  </h3>
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>
+                    {p.city} • <span style={{ textTransform: 'capitalize' }}>{p.industry}</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {isHot && (
+                    <span className="liquid-pill" style={{
+                      color: '#fbbf24', padding: '3px 9px', fontSize: 10, fontWeight: 700,
+                      background: 'rgba(251, 191, 36, 0.12)', border: '1px solid rgba(251, 191, 36, 0.25)'
+                    }}>
+                      PRIORITY
+                    </span>
+                  )}
+                  <select
+                    value={p.stage}
+                    onChange={e => handleStageChange(p.id, e.target.value)}
+                    className="liquid-input"
+                    style={{ fontSize: 11, padding: '4px 8px', borderRadius: 8 }}
+                  >
+                    <option value="new" style={{ background: '#121422' }}>New Lead</option>
+                    <option value="pitch_sent" style={{ background: '#121422' }}>Pitch Sent</option>
+                    <option value="follow_up" style={{ background: '#121422' }}>Follow Up</option>
+                    <option value="demo_scheduled" style={{ background: '#121422' }}>Demo Scheduled</option>
+                    <option value="won" style={{ background: '#121422' }}>Won</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Contact Person */}
+              <div style={{
+                background: 'rgba(255,255,255,0.025)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 12,
+                padding: '10px 14px',
+                marginBottom: 14,
+                fontSize: 12,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                <div>
+                  <span style={{ color: '#fff', fontWeight: 600 }}>{p.contactName}</span>
+                  <span style={{ color: '#64748b', marginLeft: 6 }}>({p.contactRole})</span>
+                </div>
+                <div style={{ color: '#38bdf8', fontWeight: 500 }}>{p.phone}</div>
+              </div>
+
+              {/* Real Audit Metrics */}
+              <div style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.05)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                marginBottom: 14,
+                fontSize: 12,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ color: '#64748b' }}>Google Rating:</span>
+                  <span style={{ color: p.currentRating <= 3.7 ? '#fb7185' : '#fbbf24', fontWeight: 700 }}>
+                    {p.currentRating} ★ ({p.currentReviewsCount} reviews)
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ color: '#64748b' }}>Website Status:</span>
+                  <span style={{ color: '#cbd5e1', fontWeight: 500, textAlign: 'right', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {p.websiteStatus}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Est. Deal Value:</span>
+                  <span style={{ color: '#34d399', fontWeight: 700 }}>{p.estimatedValue}</span>
+                </div>
+              </div>
+
+              {/* Solution Strategy */}
+              <div style={{ marginBottom: 14, fontSize: 12 }}>
+                <div style={{ color: '#64748b', fontWeight: 600, textTransform: 'uppercase', fontSize: 10, marginBottom: 4 }}>
+                  Solution Strategy
+                </div>
+                <div style={{ color: '#e2e8f0', lineHeight: 1.4 }}>
+                  {p.targetPitch}
+                </div>
+              </div>
+
+              {/* Notes */}
+              {p.notes && (
+                <div style={{ marginBottom: 16, fontSize: 11, color: '#94a3b8', background: 'rgba(0,0,0,0.3)', padding: '8px 10px', borderRadius: 8 }}>
+                  "{p.notes}"
+                </div>
+              )}
+
+              {/* Actions Footer */}
+              <div style={{ display: 'flex', gap: 8, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <a
+                  href={generateWhatsAppLink(p)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary btn-sm"
+                  style={{ flex: 1, textAlign: 'center', justifyContent: 'center', fontSize: 12 }}
+                >
+                  WhatsApp Pitch ↗
+                </a>
+
+                <a
+                  href={`tel:${p.phone}`}
+                  className="btn btn-secondary btn-sm"
+                  style={{ padding: '6px 12px', fontSize: 12 }}
+                  title="Call contact"
+                >
+                  Call
+                </a>
+
+                {p.stage !== 'won' ? (
+                  <button
+                    onClick={() => handleConvert(p)}
+                    disabled={convertingId === p.id}
+                    className="btn btn-primary btn-sm"
+                    style={{ flex: 1.1, textAlign: 'center', justifyContent: 'center', fontSize: 12 }}
+                  >
+                    {convertingId === p.id ? 'Converting...' : 'Convert to Client'}
+                  </button>
+                ) : (
+                  <span className="liquid-pill" style={{ padding: '6px 12px', fontSize: 11, color: '#34d399', fontWeight: 600 }}>
+                    ✓ Converted Client
+                  </span>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Add Prospect Modal */}
+      {showAddModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20
+        }}>
+          <div className="liquid-glass-elevated" style={{
+            padding: 28, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff' }}>
+                Add New Potential Buyer (Pune)
+              </h3>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 20, cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleAddProspect}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>Business Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Swaad Sweets"
+                    value={form.businessName}
+                    onChange={e => setForm({ ...form, businessName: e.target.value })}
+                    className="liquid-input"
+                    style={{ width: '100%', padding: '9px 12px', fontSize: 12 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>Locality in Pune</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. FC Road, Pune"
+                    value={form.city}
+                    onChange={e => setForm({ ...form, city: e.target.value })}
+                    className="liquid-input"
+                    style={{ width: '100%', padding: '9px 12px', fontSize: 12 }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>Contact Person Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Anand Joshi"
+                    value={form.contactName}
+                    onChange={e => setForm({ ...form, contactName: e.target.value })}
+                    className="liquid-input"
+                    style={{ width: '100%', padding: '9px 12px', fontSize: 12 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>Phone (WhatsApp) *</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="+91 98220 12345"
+                    value={form.phone}
+                    onChange={e => setForm({ ...form, phone: e.target.value })}
+                    className="liquid-input"
+                    style={{ width: '100%', padding: '9px 12px', fontSize: 12 }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>Google Rating</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    max="5"
+                    value={form.currentRating}
+                    onChange={e => setForm({ ...form, currentRating: e.target.value })}
+                    className="liquid-input"
+                    style={{ width: '100%', padding: '9px 12px', fontSize: 12 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>Total Reviews</label>
+                  <input
+                    type="number"
+                    value={form.currentReviewsCount}
+                    onChange={e => setForm({ ...form, currentReviewsCount: e.target.value })}
+                    className="liquid-input"
+                    style={{ width: '100%', padding: '9px 12px', fontSize: 12 }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>Website Status</label>
+                <input
+                  type="text"
+                  placeholder="e.g. No website / Slow mobile page"
+                  value={form.websiteStatus}
+                  onChange={e => setForm({ ...form, websiteStatus: e.target.value })}
+                  className="liquid-input"
+                  style={{ width: '100%', padding: '9px 12px', fontSize: 12 }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>Est. Deal Value</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. ₹35,000"
+                    value={form.estimatedValue}
+                    onChange={e => setForm({ ...form, estimatedValue: e.target.value })}
+                    className="liquid-input"
+                    style={{ width: '100%', padding: '9px 12px', fontSize: 12 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>Priority</label>
+                  <select
+                    value={form.opportunity}
+                    onChange={e => setForm({ ...form, opportunity: e.target.value })}
+                    className="liquid-input"
+                    style={{ width: '100%', padding: '9px 12px', fontSize: 12 }}
+                  >
+                    <option value="hot" style={{ background: '#121422' }}>Priority Lead</option>
+                    <option value="high" style={{ background: '#121422' }}>High</option>
+                    <option value="medium" style={{ background: '#121422' }}>Standard</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '12px', fontSize: 13, justifyContent: 'center' }}
+              >
+                Save to Pipeline
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   )

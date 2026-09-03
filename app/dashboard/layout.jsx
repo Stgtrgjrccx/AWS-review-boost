@@ -4,8 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV_ITEMS = [
-  { href: '/dashboard', icon: '🏢', label: 'Operations Hub' },
-  { href: '/dashboard/prospects', icon: '👥', label: 'Potential Clients' },
+  { href: '/dashboard', icon: '🎯', label: 'Potential Buyers (20)' },
   { href: '/dashboard/websites', icon: '🌐', label: 'Website Design Studio' },
   { href: '/dashboard/send', icon: '📤', label: 'Dispatch Console' },
   { href: '/dashboard/campaigns', icon: '📢', label: 'Bulk Campaigns' },
@@ -37,14 +36,14 @@ export default function DashboardLayout({ children }) {
 
     fetch('/api/analytics/feedback-count')
       .then(r => r.json())
-      .then(d => setFeedbackCount(d.count || 2))
+      .then(d => setFeedbackCount(d.count || 0))
       .catch(() => {})
   }, [])
 
-  const currentSlug = selectedClient?.slug || 'peshwa-restaurant'
-  const livePortalUrl = typeof window !== 'undefined'
+  const currentSlug = selectedClient?.slug || ''
+  const livePortalUrl = typeof window !== 'undefined' && currentSlug
     ? `${window.location.origin}/live/${currentSlug}`
-    : `/live/${currentSlug}`
+    : ''
 
   const copyLivePortal = () => {
     navigator.clipboard.writeText(livePortalUrl)
@@ -137,106 +136,153 @@ export default function DashboardLayout({ children }) {
             </button>
           </div>
 
-          <select
-            value={selectedClient?.id || ''}
-            onChange={(e) => {
-              const found = clients.find(c => c.id === e.target.value)
-              if (found) setSelectedClient(found)
-            }}
-            style={{
-              width: '100%',
-              background: '#151726',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: 8,
-              color: '#f8fafc',
-              padding: '8px 10px',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            {clients.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.industry})
-              </option>
-            ))}
-          </select>
+          {clients.length === 0 ? (
+            <div style={{ padding: '6px 2px' }}>
+              <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>
+                0 Active Clients
+              </div>
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>
+                Pitch the 20 Pune leads below to onboard your first client.
+              </div>
+            </div>
+          ) : (
+            <>
+              <select
+                value={selectedClient?.id || ''}
+                onChange={(e) => {
+                  const found = clients.find(c => c.id === e.target.value)
+                  if (found) setSelectedClient(found)
+                }}
+                style={{
+                  width: '100%',
+                  background: '#151726',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 8,
+                  color: '#f8fafc',
+                  padding: '8px 10px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {clients.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.industry})
+                  </option>
+                ))}
+              </select>
 
-          {/* Quick link to client's live portal */}
-          <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
-            <a
-              href={`/live/${currentSlug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                flex: 1,
-                textAlign: 'center',
-                background: 'rgba(16,185,129,0.12)',
-                border: '1px solid rgba(16,185,129,0.25)',
-                color: '#10b981',
-                padding: '6px 8px',
-                borderRadius: 6,
-                fontSize: 11,
-                fontWeight: 700,
-                textDecoration: 'none',
-              }}
-            >
-              👁 View Live Portal
-            </a>
-            <button
-              onClick={copyLivePortal}
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: '#cbd5e1',
-                padding: '6px 10px',
-                borderRadius: 6,
-                fontSize: 11,
-                cursor: 'pointer',
-              }}
-              title="Copy link to send to customer"
-            >
-              {copied ? '✓ Copied' : '📋 Link'}
-            </button>
-          </div>
+              {currentSlug && (
+                <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
+                  <a
+                    href={`/live/${currentSlug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      flex: 1,
+                      textAlign: 'center',
+                      background: 'rgba(16,185,129,0.12)',
+                      border: '1px solid rgba(16,185,129,0.25)',
+                      color: '#10b981',
+                      padding: '6px 8px',
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    👁 View Live Portal
+                  </a>
+                  <button
+                    onClick={copyLivePortal}
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#cbd5e1',
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      fontSize: 11,
+                      cursor: 'pointer',
+                    }}
+                    title="Copy link to send to customer"
+                  >
+                    {copied ? '✓ Copied' : '📋 Link'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Navigation */}
         <nav className="sidebar-nav">
-          <div className="nav-section-label">Operations Console</div>
-          {NAV_ITEMS.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`nav-item ${pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)) ? 'active' : ''}`}
-            >
-              <span style={{ fontSize: 16 }}>{item.icon}</span>
-              <span>{item.label}</span>
-              {item.badge && feedbackCount > 0 && (
-                <span className="nav-badge" style={{ background: '#ef4444', color: '#fff' }}>{feedbackCount}</span>
-              )}
-            </Link>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`sidebar-link ${isActive ? 'active' : ''}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  color: isActive ? '#fff' : '#94a3b8',
+                  background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+                  fontWeight: isActive ? 700 : 500,
+                  fontSize: 13,
+                  textDecoration: 'none',
+                  transition: 'all 0.15s ease',
+                  border: isActive ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+                  boxShadow: isActive ? 'inset 0 1px 0 rgba(255,255,255,0.2)' : 'none',
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{item.icon}</span>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.badge && feedbackCount > 0 && (
+                  <span style={{
+                    background: '#ef4444',
+                    color: '#fff',
+                    borderRadius: 10,
+                    padding: '1px 7px',
+                    fontSize: 11,
+                    fontWeight: 800,
+                  }}>
+                    {feedbackCount}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
         </nav>
 
-        {/* Sidebar Footer: System Status */}
-        <div className="sidebar-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8 }}>
-            System Gateway Health
+        {/* Sidebar Footer */}
+        <div style={{
+          marginTop: 'auto',
+          paddingTop: 16,
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: 11,
+          color: '#64748b',
+        }}>
+          <div>
+            <div style={{ color: '#94a3b8', fontWeight: 600 }}>Pune Market</div>
+            <div>20 Verified Leads</div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
-              <span>SMS / WhatsApp</span>
-              <span style={{ color: '#10b981', fontWeight: 600 }}>● Online</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
-              <span>Database Sync</span>
-              <span style={{ color: '#10b981', fontWeight: 600 }}>● Connected</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
-              <span>Operator Mode</span>
-              <span style={{ color: '#38bdf8', fontWeight: 600 }}>Single Master</span>
-            </div>
+          <div style={{
+            background: 'rgba(16,185,129,0.15)',
+            border: '1px solid rgba(16,185,129,0.3)',
+            borderRadius: 6,
+            padding: '3px 8px',
+            color: '#10b981',
+            fontWeight: 700,
+            fontSize: 10,
+          }}>
+            LIVE
           </div>
         </div>
       </aside>
@@ -254,36 +300,53 @@ export default function DashboardLayout({ children }) {
             <span style={{ fontWeight: 700, letterSpacing: '-0.02em' }}>{activePage?.label || 'Operations'}</span>
             <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>/</span>
             <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 500 }}>
-              Active Client: <strong style={{ color: '#fff', fontWeight: 600 }}>{selectedClient?.name || 'All Clients'}</strong>
+              {selectedClient ? (
+                <>Active Client: <strong style={{ color: '#fff', fontWeight: 600 }}>{selectedClient.name}</strong></>
+              ) : (
+                <>Pipeline: <strong style={{ color: '#38bdf8', fontWeight: 600 }}>20 Potential Buyers (Pune)</strong></>
+              )}
             </span>
           </div>
 
           <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Direct button to copy client live portal */}
-            <button
-              onClick={copyLivePortal}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}
-            >
-              <span>📋</span>
-              <span>{copied ? 'Link Copied!' : 'Copy Client Portal Link'}</span>
-            </button>
-
-            {/* Test Customer Review Funnel */}
             <a
-              href={`/review/${currentSlug}?name=Customer`}
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/exports/pune_business_leads_under_4_stars.xlsx"
+              download="pune_business_leads_under_4_stars.xlsx"
               className="btn btn-secondary btn-sm"
               style={{ fontSize: 12 }}
             >
-              ⭐ Review Funnel
+              📊 Export Leads (.xlsx)
             </a>
 
-            {/* Quick Dispatch */}
-            <Link href="/dashboard/send" className="btn btn-primary btn-sm" style={{ fontSize: 12 }}>
-              + Dispatch Invite
-            </Link>
+            {selectedClient && currentSlug && (
+              <>
+                <button
+                  onClick={copyLivePortal}
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}
+                >
+                  <span>📋</span>
+                  <span>{copied ? 'Link Copied!' : 'Copy Client Portal Link'}</span>
+                </button>
+                <a
+                  href={`/review/${currentSlug}?name=Customer`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: 12 }}
+                >
+                  ⭐ Review Funnel
+                </a>
+              </>
+            )}
+
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn btn-primary btn-sm"
+              style={{ fontSize: 12 }}
+            >
+              + Onboard Client
+            </button>
           </div>
         </header>
 

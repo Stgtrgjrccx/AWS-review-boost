@@ -11,11 +11,7 @@ export default function FeedbackPage() {
       .then(r => r.json())
       .then(d => { setFeedbacks(d.feedbacks || []); setLoading(false) })
       .catch(() => {
-        setFeedbacks([
-          { id: '1', starRating: 2, quickTags: ['Long wait ⏳', 'Poor service 😞'], comment: 'Waited 45 minutes and the food was cold.', resolved: false, customer: { name: 'Priya S.' }, createdAt: new Date().toISOString() },
-          { id: '2', starRating: 1, quickTags: ['Rude staff 😠'], comment: 'The waiter was extremely rude.', resolved: false, customer: { name: 'Rahul M.' }, createdAt: new Date(Date.now() - 86400000).toISOString() },
-          { id: '3', starRating: 3, quickTags: ['Average experience'], comment: 'It was okay, nothing special.', resolved: true, customer: { name: 'Sneha P.' }, createdAt: new Date(Date.now() - 172800000).toISOString() },
-        ])
+        setFeedbacks([])
         setLoading(false)
       })
   }, [])

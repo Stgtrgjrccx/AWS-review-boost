@@ -23,10 +23,7 @@ export default function CampaignsPage() {
     fetch('/api/campaigns')
       .then(r => r.json())
       .then(d => setCampaigns(d.campaigns || []))
-      .catch(() => setCampaigns([
-        { id: '1', name: 'Post-Visit Follow-up', channel: 'whatsapp', totalSent: 145, totalClicked: 89, status: 'completed', createdAt: new Date().toISOString() },
-        { id: '2', name: 'Weekend Happy Hour Blast', channel: 'sms', totalSent: 67, totalClicked: 31, status: 'completed', createdAt: new Date(Date.now() - 604800000).toISOString() },
-      ]))
+      .catch(() => setCampaigns([]))
   }, [])
 
   const handleFileChange = (e) => {
