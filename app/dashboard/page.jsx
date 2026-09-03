@@ -10,6 +10,16 @@ export default function ScrollytellingCommandCenter() {
   const [searchQuery, setSearchQuery] = useState('')
   const [convertingId, setConvertingId] = useState(null)
   const [notification, setNotification] = useState(null)
+  
+  // Attach New Business Modal State
+  const [showAttachModal, setShowAttachModal] = useState(false)
+  const [attachName, setAttachName] = useState('')
+  const [attachIndustry, setAttachIndustry] = useState('restaurant')
+  const [attachGoogleUrl, setAttachGoogleUrl] = useState('')
+  const [attachPhone, setAttachPhone] = useState('')
+  const [attachCity, setAttachCity] = useState('Pune')
+  const [attaching, setAttaching] = useState(false)
+  const [attachSuccess, setAttachSuccess] = useState(null)
 
   const loadData = () => {
     Promise.all([
@@ -20,6 +30,33 @@ export default function ScrollytellingCommandCenter() {
       setClients(cData.clients || [])
       setLoading(false)
     })
+  }
+
+  const handleAttachSubmit = async (e) => {
+    e.preventDefault()
+    if (!attachName.trim()) return
+    setAttaching(true)
+    try {
+      const res = await fetch('/api/operator/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: attachName.trim(),
+          industry: attachIndustry,
+          googleReviewUrl: attachGoogleUrl.trim() || `https://search.google.com/local/writereview?query=${encodeURIComponent(attachName.trim())}`,
+          phone: attachPhone.trim(),
+        })
+      })
+      const data = await res.json()
+      if (data.client) {
+        setAttachSuccess(data.client)
+        loadData()
+      }
+    } catch (err) {
+      console.error('Attach error:', err)
+    } finally {
+      setAttaching(false)
+    }
   }
 
   useEffect(() => {
@@ -174,6 +211,24 @@ export default function ScrollytellingCommandCenter() {
 
         {/* Action Controls */}
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 28, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => {
+              setAttachSuccess(null)
+              setShowAttachModal(true)
+            }}
+            className="btn btn-primary btn-sm"
+            style={{
+              padding: '8px 18px',
+              fontSize: 12,
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)',
+              boxShadow: '0 4px 18px rgba(14,165,233,0.35)',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            ⚡ Attach Any Business (30-Sec Setup)
+          </button>
           <a
             href="/exports/pune_business_leads_under_4_stars.xlsx"
             download="pune_business_leads_under_4_stars.xlsx"
@@ -563,48 +618,80 @@ export default function ScrollytellingCommandCenter() {
             <h3 style={{ fontSize: 18, fontWeight: 700, color: '#ffffff', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
               Portfolio Ready for First Client
             </h3>
-            <p style={{ color: '#94a3b8', fontSize: 13, maxWidth: 460, margin: '0 auto 20px auto', lineHeight: 1.6 }}>
-              You have 20 verified Potential Buyers in Pune above. Once you pitch on WhatsApp and close a deal, click &ldquo;Convert&rdquo; to launch their active live portal.
+            <p style={{ color: '#94a3b8', fontSize: 13, maxWidth: 460, margin: '0 auto 24px auto', lineHeight: 1.6 }}>
+              Attach any business in 30 seconds to immediately generate their consumer AI review portal and tabletop QR stands, or convert one of your 20 Pune leads above.
             </p>
-            <a
-              href="#critical-tier"
-              onClick={(e) => {
-                e.preventDefault()
-                window.scrollTo({ top: 350, behavior: 'smooth' })
-              }}
-              className="btn btn-secondary btn-sm"
-              style={{ padding: '8px 18px', fontSize: 12 }}
-            >
-              Start Outreach with Chapter 01 ↑
-            </a>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => {
+                  setAttachSuccess(null)
+                  setShowAttachModal(true)
+                }}
+                className="btn btn-primary btn-sm"
+                style={{ padding: '9px 20px', fontSize: 13, fontWeight: 700 }}
+              >
+                + Attach Any Business in 30s ⚡
+              </button>
+              <a
+                href="#critical-tier"
+                onClick={(e) => {
+                  e.preventDefault()
+                  window.scrollTo({ top: 350, behavior: 'smooth' })
+                }}
+                className="btn btn-secondary btn-sm"
+                style={{ padding: '9px 20px', fontSize: 12 }}
+              >
+                Explore Pune Leads ↑
+              </a>
+            </div>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
             {clients.map(client => (
-              <div key={client.id} className="scrolly-card" style={{ borderTop: '1px solid rgba(16,185,129,0.4)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <div>
-                    <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#ffffff' }}>
-                      {client.name}
-                    </h3>
-                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-                      {client.industry} • Active Property
+              <div key={client.id} className="scrolly-card" style={{ borderTop: '1px solid rgba(16,185,129,0.4)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div>
+                      <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#ffffff' }}>
+                        {client.name}
+                      </h3>
+                      <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+                        {client.industry} • Active System
+                      </div>
+                    </div>
+                    <span className="liquid-pill" style={{ color: '#34d399', fontSize: 11, fontWeight: 700, padding: '3px 10px' }}>
+                      ● LIVE
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>
+                    <div style={{ color: '#cbd5e1', marginBottom: 4 }}>
+                      <strong style={{ color: '#64748b' }}>Consumer URL:</strong> /review/{client.slug}
+                    </div>
+                    <div style={{ color: '#cbd5e1' }}>
+                      <strong style={{ color: '#64748b' }}>Google Target:</strong> Active Direct Dialog
                     </div>
                   </div>
-                  <span className="liquid-pill" style={{ color: '#34d399', fontSize: 11, fontWeight: 700, padding: '3px 10px' }}>
-                    ● LIVE
-                  </span>
                 </div>
 
-                <div style={{ marginTop: 20 }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <a
+                    href={`/review/${client.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary btn-sm"
+                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center', fontSize: 12 }}
+                  >
+                    🚀 Test Consumer Flow ↗
+                  </a>
                   <a
                     href={`/live/${client.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn btn-primary btn-sm"
-                    style={{ width: '100%', textAlign: 'center', justifyContent: 'center', fontSize: 12 }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '6px 12px', fontSize: 12 }}
                   >
-                    Open Live Portal ↗
+                    📊 Live Stats
                   </a>
                 </div>
               </div>
@@ -613,6 +700,264 @@ export default function ScrollytellingCommandCenter() {
         )}
       </section>
 
+      {/* ATTACH ANY BUSINESS MODAL */}
+      {showAttachModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: 20
+        }}>
+          <div style={{
+            background: 'rgba(20, 20, 25, 0.95)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            borderRadius: 24,
+            padding: 32,
+            width: '100%',
+            maxWidth: 480,
+            boxShadow: '0 30px 80px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+            position: 'relative'
+          }}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowAttachModal(false)}
+              style={{
+                position: 'absolute',
+                top: 20,
+                right: 20,
+                background: 'rgba(255,255,255,0.06)',
+                border: 'none',
+                borderRadius: '50%',
+                width: 32,
+                height: 32,
+                color: '#94a3b8',
+                cursor: 'pointer',
+                fontSize: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ✕
+            </button>
+
+            {!attachSuccess ? (
+              <form onSubmit={handleAttachSubmit}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.25)', padding: '4px 12px', borderRadius: 980, color: '#38bdf8', fontSize: 11, fontWeight: 700, marginBottom: 12 }}>
+                  <span>⚡</span> 30-SECOND SETUP
+                </div>
+
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: '#ffffff', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+                  Attach Any Business
+                </h2>
+                <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 24px 0', lineHeight: 1.5 }}>
+                  Instantly activates their AI review generator, tabletop counter QR stands, and private feedback shielding.
+                </p>
+
+                {/* Business Name */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#cbd5e1', marginBottom: 6 }}>
+                    Business Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Blue Tokai Coffee, Chaitanya Paranthas"
+                    value={attachName}
+                    onChange={e => setAttachName(e.target.value)}
+                    className="liquid-input"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                {/* Industry Category */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#cbd5e1', marginBottom: 6 }}>
+                    Industry / Category
+                  </label>
+                  <select
+                    value={attachIndustry}
+                    onChange={e => setAttachIndustry(e.target.value)}
+                    className="liquid-input"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  >
+                    <option value="restaurant">Restaurant / Dining</option>
+                    <option value="cafe">Cafe / Bakery / Coffee</option>
+                    <option value="salon">Salon / Hair &amp; Spa</option>
+                    <option value="fitness">Gym / Fitness Center</option>
+                    <option value="medical">Clinic / Healthcare</option>
+                    <option value="dental">Dental Practice</option>
+                    <option value="retail">Retail Shop / Store</option>
+                    <option value="hotel">Hotel / Hospitality</option>
+                  </select>
+                </div>
+
+                {/* Google Review Link */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#cbd5e1', marginBottom: 6 }}>
+                    Google Review Link / Maps Link (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. https://search.google.com/local/writereview?placeid=... or Maps link"
+                    value={attachGoogleUrl}
+                    onChange={e => setAttachGoogleUrl(e.target.value)}
+                    className="liquid-input"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                  <p style={{ fontSize: 11, color: '#64748b', margin: '4px 0 0 0' }}>
+                    If left blank, the system automatically builds a search link for the business name.
+                  </p>
+                </div>
+
+                {/* Contact Phone */}
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#cbd5e1', marginBottom: 6 }}>
+                    Manager WhatsApp / Phone (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. +91 98220 12345"
+                    value={attachPhone}
+                    onChange={e => setAttachPhone(e.target.value)}
+                    className="liquid-input"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={attaching}
+                  className="btn btn-primary"
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: 14,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)',
+                    boxShadow: '0 4px 20px rgba(14, 165, 233, 0.4)',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {attaching ? 'Activating System...' : '⚡ Activate System & Generate Live Demo'}
+                </button>
+              </form>
+            ) : (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>🎉</div>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: '#ffffff', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
+                  System Active &amp; Live!
+                </h2>
+                <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 24px 0', lineHeight: 1.5 }}>
+                  <strong style={{ color: '#ffffff' }}>{attachSuccess.name}</strong> is now configured with the AI review generator and private shielding.
+                </p>
+
+                {/* Instant Action 1: Test Consumer AI Review Flow */}
+                <a
+                  href={`/review/${attachSuccess.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: 14,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    marginBottom: 10,
+                    textDecoration: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  🚀 Test Consumer AI Review Flow (Live Demo) ↗
+                </a>
+
+                {/* Instant Action 2: Tabletop QR Stand */}
+                <a
+                  href="/dashboard/qr-codes"
+                  className="btn btn-secondary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: 14,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    marginBottom: 10,
+                    textDecoration: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  📲 View &amp; Download Tabletop QR Stand ↗
+                </a>
+
+                {/* Instant Action 3: Client Live Portal */}
+                <a
+                  href={`/live/${attachSuccess.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: 14,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    marginBottom: 16,
+                    textDecoration: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  📊 Open Manager Live Reporting Portal ↗
+                </a>
+
+                <button
+                  onClick={() => {
+                    setShowAttachModal(false)
+                    setAttachSuccess(null)
+                    setAttachName('')
+                    setAttachGoogleUrl('')
+                    setAttachPhone('')
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: 12,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Close &amp; View Portfolio
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
+
