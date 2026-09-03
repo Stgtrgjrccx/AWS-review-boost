@@ -304,10 +304,34 @@ export default function ScrollytellingCommandCenter() {
                     <div style={{ color: '#38bdf8', fontWeight: 500 }}>{p.phone}</div>
                   </div>
 
-                  {/* Current Situation */}
+                  {/* Current Situation & Website Asset */}
                   <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14, lineHeight: 1.5 }}>
-                    <div style={{ color: '#cbd5e1', marginBottom: 4 }}>
-                      <strong style={{ color: '#64748b' }}>Current Asset:</strong> {p.websiteStatus}
+                    <div style={{ color: '#cbd5e1', marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#64748b' }}>Web Asset:</span>
+                      {p.websiteUrl ? (
+                        <a
+                          href={p.websiteUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: p.hasDirectWebsite ? '#38bdf8' : '#94a3b8',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            maxWidth: 210,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          <span>{p.hasDirectWebsite ? '🌐' : '🔗'}</span>
+                          <span>{p.websiteUrl.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]} ↗</span>
+                        </a>
+                      ) : (
+                        <span style={{ color: '#64748b' }}>No Website</span>
+                      )}
                     </div>
                     <div style={{ color: '#cbd5e1' }}>
                       <strong style={{ color: '#64748b' }}>Strategy:</strong> {p.targetPitch}
@@ -432,10 +456,34 @@ export default function ScrollytellingCommandCenter() {
                     <div style={{ color: '#38bdf8', fontWeight: 500 }}>{p.phone}</div>
                   </div>
 
-                  {/* Current Situation */}
+                  {/* Current Situation & Website Asset */}
                   <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14, lineHeight: 1.5 }}>
-                    <div style={{ color: '#cbd5e1', marginBottom: 4 }}>
-                      <strong style={{ color: '#64748b' }}>Current Asset:</strong> {p.websiteStatus}
+                    <div style={{ color: '#cbd5e1', marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#64748b' }}>Web Asset:</span>
+                      {p.websiteUrl ? (
+                        <a
+                          href={p.websiteUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: p.hasDirectWebsite ? '#38bdf8' : '#94a3b8',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            maxWidth: 210,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          <span>{p.hasDirectWebsite ? '🌐' : '🔗'}</span>
+                          <span>{p.websiteUrl.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]} ↗</span>
+                        </a>
+                      ) : (
+                        <span style={{ color: '#64748b' }}>No Website</span>
+                      )}
                     </div>
                     <div style={{ color: '#cbd5e1' }}>
                       <strong style={{ color: '#64748b' }}>Strategy:</strong> {p.targetPitch}
