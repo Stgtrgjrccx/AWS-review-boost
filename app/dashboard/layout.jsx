@@ -41,7 +41,7 @@ export default function DashboardLayout({ children }) {
       .catch(() => {})
   }, [])
 
-  const currentSlug = selectedClient?.slug || 'rustic-table'
+  const currentSlug = selectedClient?.slug || 'peshwa-restaurant'
   const livePortalUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/live/${currentSlug}`
     : `/live/${currentSlug}`
@@ -73,12 +73,44 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className="dashboard-layout">
-      {/* Sidebar - Opera Cloud Enterprise Style */}
-      <aside className="sidebar" style={{ background: '#0b0c16', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-        <div className="sidebar-logo" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', paddingBottom: 18, marginBottom: 16 }}>
-          <div className="sidebar-logo-icon" style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}>⚡</div>
-          <div className="sidebar-logo-text">
-            ASW <span>Cloud Ops</span>
+      {/* Sidebar - Apple Liquid Glass VisionOS Style */}
+      <aside className="sidebar" style={{
+        background: 'rgba(10, 12, 18, 0.65)',
+        backdropFilter: 'blur(40px) saturate(190%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(190%)',
+        borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+        boxShadow: 'inset -1px 0 0 rgba(255, 255, 255, 0.05)',
+      }}>
+        <div className="sidebar-logo" style={{
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          padding: '20px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+        }}>
+          <div style={{
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            fontWeight: 800,
+            fontSize: 14,
+          }}>
+            ⌘
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: '#ffffff', letterSpacing: '-0.02em' }}>
+              ASW Studio
+            </div>
+            <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Opera Cloud OS
+            </div>
           </div>
         </div>
 
@@ -210,14 +242,19 @@ export default function DashboardLayout({ children }) {
       </aside>
 
       {/* Main Command Center */}
-      <main className="dashboard-main" style={{ background: '#07080e' }}>
-        <header className="topbar" style={{ background: '#0b0c16', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      <main className="dashboard-main" style={{ background: 'transparent' }}>
+        <header className="topbar" style={{
+          background: 'rgba(10, 12, 18, 0.65)',
+          backdropFilter: 'blur(40px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(190%)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        }}>
           <div className="topbar-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span>{activePage?.icon}</span>
-            <span>{activePage?.label || 'Operations'}</span>
-            <span style={{ color: '#64748b', fontSize: 14 }}>|</span>
+            <span style={{ fontSize: 16 }}>{activePage?.icon}</span>
+            <span style={{ fontWeight: 700, letterSpacing: '-0.02em' }}>{activePage?.label || 'Operations'}</span>
+            <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>/</span>
             <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 500 }}>
-              Operating on: <strong style={{ color: '#fff' }}>{selectedClient?.name || 'All Clients'}</strong>
+              Active Client: <strong style={{ color: '#fff', fontWeight: 600 }}>{selectedClient?.name || 'All Clients'}</strong>
             </span>
           </div>
 
@@ -229,23 +266,23 @@ export default function DashboardLayout({ children }) {
               style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}
             >
               <span>📋</span>
-              <span>{copied ? 'Live Link Copied!' : 'Copy Client Dashboard Link'}</span>
+              <span>{copied ? 'Link Copied!' : 'Copy Client Portal Link'}</span>
             </button>
 
             {/* Test Customer Review Funnel */}
             <a
-              href={`/review/${currentSlug}?name=Valued+Customer`}
+              href={`/review/${currentSlug}?name=Customer`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-secondary btn-sm"
               style={{ fontSize: 12 }}
             >
-              ⭐ Open Review Funnel
+              ⭐ Review Funnel
             </a>
 
             {/* Quick Dispatch */}
             <Link href="/dashboard/send" className="btn btn-primary btn-sm" style={{ fontSize: 12 }}>
-              + Dispatch Request
+              + Dispatch Invite
             </Link>
           </div>
         </header>
@@ -258,13 +295,17 @@ export default function DashboardLayout({ children }) {
       {/* Add Client Modal */}
       {showAddModal && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)',
           zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
         }}>
           <div style={{
-            background: '#0f111e', border: '1px solid rgba(255,255,255,0.15)',
-            borderRadius: 20, padding: 32, width: '100%', maxWidth: 500,
-            boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+            background: 'rgba(15, 18, 28, 0.85)',
+            backdropFilter: 'blur(50px) saturate(200%)',
+            WebkitBackdropFilter: 'blur(50px) saturate(200%)',
+            border: '1px solid rgba(255,255,255,0.16)',
+            borderTop: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: 24, padding: 32, width: '100%', maxWidth: 500,
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 35px 80px rgba(0,0,0,0.8)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Add New Client Property</h2>
