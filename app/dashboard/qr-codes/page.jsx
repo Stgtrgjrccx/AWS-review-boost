@@ -18,11 +18,27 @@ function QRCodesContent() {
   const [bgColor, setBgColor] = useState('#ffffff')
   const [loading, setLoading] = useState(false)
   const [origin, setOrigin] = useState('')
+  const [networkInfo, setNetworkInfo] = useState({ localIp: '', wifiBase: '', localhostBase: '' })
+  const [targetHostMode, setTargetHostMode] = useState('wifi') // 'wifi' | 'localhost' | 'custom'
+  const [customHostUrl, setCustomHostUrl] = useState('')
+  const [copiedLink, setCopiedLink] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setOrigin(window.location.origin)
     }
+
+    // Fetch system network info to enable seamless phone scanning
+    fetch('/api/system/network')
+      .then(r => r.json())
+      .then(net => {
+        if (net?.wifiBase) {
+          setNetworkInfo(net)
+          // Default to Wi-Fi if available so phone scans work out-of-the-box
+          setTargetHostMode('wifi')
+        }
+      })
+      .catch(() => {})
 
     // Fetch all available businesses and prospects
     Promise.all([
@@ -66,7 +82,16 @@ function QRCodesContent() {
     })
   }, [initialSlug])
 
-  const reviewUrl = slug ? `${origin || 'https://reviewboostpro.com'}/review/${slug}` : ''
+  let activeBaseUrl = origin || 'http://localhost:3000'
+  if (targetHostMode === 'wifi' && networkInfo.wifiBase) {
+    activeBaseUrl = networkInfo.wifiBase
+  } else if (targetHostMode === 'localhost') {
+    activeBaseUrl = networkInfo.localhostBase || 'http://localhost:3000'
+  } else if (targetHostMode === 'custom' && customHostUrl.trim()) {
+    activeBaseUrl = customHostUrl.trim().replace(/\/+$/, '')
+  }
+
+  const reviewUrl = slug ? `${activeBaseUrl}/review/${slug}` : ''
 
   const generateQR = async () => {
     if (!reviewUrl) return
@@ -88,7 +113,24 @@ function QRCodesContent() {
 
   useEffect(() => {
     if (slug) generateQR()
-  }, [slug, size, fgColor, bgColor, origin])
+  }, [slug, size, fgColor, bgColor, activeBaseUrl])
+
+  const handleCopyLink = () => {
+    if (!reviewUrl) return
+    navigator.clipboard.writeText(reviewUrl).then(() => {
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 3000)
+    }).catch(() => {
+      const el = document.createElement('textarea')
+      el.value = reviewUrl
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 3000)
+    })
+  }
 
   const handleCustomNameChange = (val) => {
     setCustomInputName(val)
@@ -233,28 +275,137 @@ function QRCodesContent() {
               </div>
             )}
 
-            {/* Review Link URL */}
-            <div className="form-group" style={{ marginTop: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <label className="form-label" style={{ margin: 0, fontSize: 12, color: '#cbd5e1' }}>Consumer Review URL</label>
-                {slug && (
+            {/* Target Destination & Device Selector */}
+            <div className="form-group" style={{ marginTop: 18, background: 'rgba(255,255,255,0.02)', padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <label className="form-label" style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>
+                  Target Destination Mode
+                </label>
+                <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 600 }}>
+                  {targetHostMode === 'wifi' ? '📱 Mobile Scan Ready' : targetHostMode === 'localhost' ? '💻 Local Desktop' : '🌐 Custom Domain'}
+                </span>
+              </div>
+
+              {/* Host Tabs */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => setTargetHostMode('wifi')}
+                  style={{
+                    padding: '8px 6px',
+                    borderRadius: 8,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    border: targetHostMode === 'wifi' ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.08)',
+                    cursor: 'pointer',
+                    background: targetHostMode === 'wifi' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.03)',
+                    color: targetHostMode === 'wifi' ? '#38bdf8' : '#94a3b8',
+                    textAlign: 'center'
+                  }}
+                  title="Accessible by phones on the same Wi-Fi"
+                >
+                  📱 Phone (Wi-Fi)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetHostMode('localhost')}
+                  style={{
+                    padding: '8px 6px',
+                    borderRadius: 8,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    border: targetHostMode === 'localhost' ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.08)',
+                    cursor: 'pointer',
+                    background: targetHostMode === 'localhost' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.03)',
+                    color: targetHostMode === 'localhost' ? '#38bdf8' : '#94a3b8',
+                    textAlign: 'center'
+                  }}
+                  title="For testing directly on this computer"
+                >
+                  💻 Localhost
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetHostMode('custom')}
+                  style={{
+                    padding: '8px 6px',
+                    borderRadius: 8,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    border: targetHostMode === 'custom' ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.08)',
+                    cursor: 'pointer',
+                    background: targetHostMode === 'custom' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.03)',
+                    color: targetHostMode === 'custom' ? '#38bdf8' : '#94a3b8',
+                    textAlign: 'center'
+                  }}
+                  title="Use live Render domain or custom web address"
+                >
+                  🌐 Live URL
+                </button>
+              </div>
+
+              {targetHostMode === 'wifi' && (
+                <p style={{ fontSize: 11, color: '#34d399', margin: '0 0 10px 0', lineHeight: 1.4 }}>
+                  ✓ <strong>Phone Scanner Mode:</strong> Generates QR with your local Wi-Fi IP (<code>{networkInfo.localIp || '192.168.1.131'}</code>) so smartphones on your Wi-Fi open the review page instantly.
+                </p>
+              )}
+
+              {targetHostMode === 'localhost' && (
+                <p style={{ fontSize: 11, color: '#f59e0b', margin: '0 0 10px 0', lineHeight: 1.4 }}>
+                  ⚠️ <strong>Note:</strong> <code>localhost:3000</code> only works in this computer's browser. If scanning on a phone, switch to <strong>Phone (Wi-Fi)</strong>!
+                </p>
+              )}
+
+              {targetHostMode === 'custom' && (
+                <div style={{ marginBottom: 10 }}>
+                  <input
+                    type="url"
+                    placeholder="https://asw-review-boost.onrender.com"
+                    value={customHostUrl}
+                    onChange={e => setCustomHostUrl(e.target.value)}
+                    className="form-input"
+                    style={{ fontSize: 12, padding: '7px 10px' }}
+                  />
+                </div>
+              )}
+
+              {/* Exact Consumer Review URL */}
+              <div>
+                <label className="form-label" style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
+                  Encoded Link in QR Code:
+                </label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    className="form-input"
+                    value={reviewUrl}
+                    readOnly
+                    style={{ color: '#38bdf8', fontSize: 12, fontWeight: 500 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="btn btn-secondary btn-sm"
+                    style={{ flexShrink: 0, padding: '6px 12px', fontSize: 11 }}
+                  >
+                    {copiedLink ? '✓ Copied' : '📋 Copy'}
+                  </button>
+                </div>
+              </div>
+
+              {/* 1-Click Launch Button */}
+              {slug && (
+                <div style={{ marginTop: 10 }}>
                   <a
                     href={reviewUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, color: '#38bdf8' }}
+                    className="btn btn-primary btn-sm"
+                    style={{ width: '100%', justifyContent: 'center', fontSize: 12, padding: '8px 12px' }}
                   >
-                    🚀 Test Consumer Flow ↗
+                    🚀 Open & Test Review Funnel in New Tab ↗
                   </a>
-                )}
-              </div>
-              <input
-                className="form-input"
-                value={reviewUrl}
-                readOnly
-                style={{ color: '#38bdf8', fontSize: 12 }}
-              />
+                </div>
+              )}
             </div>
 
             {/* Custom Styling */}
